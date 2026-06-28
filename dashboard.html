@@ -170,14 +170,12 @@
   .tag.new { background: rgba(255,93,93,0.15); color: var(--alert); }
   .tag.recurring { background: rgba(245,166,35,0.13); color: var(--warn); }
 
-  /* flash when a row updates */
   @keyframes flash {
     0%   { background: rgba(61,214,160,0.18); }
     100% { background: transparent; }
   }
   .row.flash { animation: flash 1.5s ease; }
 
-  /* ── Empty state ── */
   .empty {
     padding: 56px 24px;
     text-align: center;
@@ -190,7 +188,6 @@
     margin-bottom: 6px;
   }
 
-  /* ── Section titles ── */
   .section-title {
     font-family: var(--display);
     font-weight: 500;
@@ -201,7 +198,6 @@
     margin: 32px 0 12px;
   }
 
-  /* ── Control panel ── */
   .nav {
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 16px;
@@ -219,7 +215,6 @@
   .nav-links a.active { color: var(--signal); border-bottom-color: var(--signal); }
   .nav-actions { display: flex; align-items: center; gap: 12px; }
 
-  /* shared button + hint styles (used by nav toggle and the settings page) */
   button {
     background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
     font-family: var(--mono); font-size: 12px; padding: 8px 14px;
@@ -229,7 +224,7 @@
   button.primary { border-color: var(--signal); color: var(--signal); }
   button.running { border-color: var(--alert); color: var(--alert); }
   .hint { color: var(--muted); font-size: 12px; }
-  /* ── Incidents feed ── */
+
   .feed-head.incidents-head,
   .event-row {
     grid-template-columns: 4px 0.9fr 2.2fr 0.8fr;
@@ -246,7 +241,7 @@
   .event-row:last-child { border-bottom: none; }
   .event-row:hover { background: var(--panel-2); }
 
-  /* severity-driven left border + tag color */
+
   .event-row.critical { border-left-color: var(--alert); }
   .event-row.warning  { border-left-color: var(--warn); }
   .event-row.info     { border-left-color: var(--signal); }

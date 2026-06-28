@@ -12,7 +12,7 @@ def get_connection():
 
 
 def init_db():
-    """Create tables if they don't exist yet. Safe to call on every startup."""
+    """initialize database"""
     with get_connection() as conn:
         conn.execute("PRAGMA journal_mode=WAL")
 

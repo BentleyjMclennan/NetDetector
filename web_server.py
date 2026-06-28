@@ -31,7 +31,6 @@ SNIFFER_SCRIPT = os.path.join(BASE_DIR, "netdetector.py")
 POLL_INTERVAL = 0.5
 
 
-# ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.get("/")
 async def dashboard():
@@ -95,13 +94,6 @@ async def state_socket(websocket: WebSocket):
         pass
 
 
-# ── Config: the alert recipient email ───────────────────────────────────────────
-# ⚠ The Start button below only works if THIS server runs elevated (Run as
-#   Administrator), because the sniffer it launches inherits these privileges and
-#   Scapy needs admin to capture. When control features are enabled, bind to
-#   localhost so they aren't reachable from the LAN:
-#       python -m uvicorn web_server:app --host 127.0.0.1 --port 8000
-
 def _read_config() -> dict:
     with open(CONFIG_PATH, encoding="utf-8") as f:
         return json.load(f)
@@ -160,8 +152,6 @@ async def update_config(payload: dict):
     await asyncio.to_thread(_write_config, cfg)
     return _config_view(cfg)
 
-
-# ── Sniffer process control ─────────────────────────────────────────────────────
 
 class SnifferManager:
     """Starts and stops netdetector.py as a child process."""
