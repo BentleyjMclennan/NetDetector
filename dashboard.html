@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Watch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0e1419;
+    --panel:     #161e26;
+    --panel-2:   #1b242e;
+    --border:    #243240;
+    --text:      #d8e0e8;
+    --muted:     #6b7d8f;
+    --signal:    #3dd6a0;  
+    --warn:      #f5a623;  
+    --alert:     #ff5d5d;  
+    --display: "Space Grotesk", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .title {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+  }
+  .title .accent { color: var(--signal); }
+  .subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .pulse {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--signal);
+    position: relative;
+  }
+  .pulse::after {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: var(--signal);
+    animation: ping 1.8s cubic-bezier(0,0,0.2,1) infinite;
+  }
+  @keyframes ping {
+    0%   { transform: scale(1); opacity: 0.7; }
+    80%, 100% { transform: scale(3); opacity: 0; }
+  }
+  .status.down .pulse { background: var(--muted); }
+  .status.down .pulse::after { animation: none; }
+  .status.down { color: var(--alert); }
+
+  /* ── Stat strip ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin: 24px 0;
+  }
+  .stat { background: var(--panel); padding: 16px 18px; }
+  .stat .num {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 28px;
+    line-height: 1;
+  }
+  .stat .label {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .stat.alarm .num { color: var(--alert); }
+
+  /* ── Table ── */
+  .feed {
+    border: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .feed-head, .row {
+    display: grid;
+    grid-template-columns: 14px 1.4fr 1.3fr 1fr 0.7fr 1.1fr;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 18px;
+  }
+  .feed-head {
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    background: var(--panel-2);
+  }
+  .row {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.4s ease;
+  }
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: var(--panel-2); }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.new { background: var(--alert); box-shadow: 0 0 8px var(--alert); }
+  .dot.recurring { background: var(--warn); }
+
+  .mac { font-weight: 500; color: var(--text); }
+  .vendor { color: var(--text); }
+  .vendor.unknown { color: var(--muted); font-style: italic; }
+  .ip, .seen { color: var(--muted); }
+  .count {
+    font-weight: 700;
+    color: var(--warn);
+  }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+  .tag.new { background: rgba(255,93,93,0.15); color: var(--alert); }
+  .tag.recurring { background: rgba(245,166,35,0.13); color: var(--warn); }
+
+  /* flash when a row updates */
+  @keyframes flash {
+    0%   { background: rgba(61,214,160,0.18); }
+    100% { background: transparent; }
+  }
+  .row.flash { animation: flash 1.5s ease; }
+
+  /* ── Empty state ── */
+  .empty {
+    padding: 56px 24px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .empty .big {
+    font-family: var(--display);
+    font-size: 18px;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  /* ── Section titles ── */
+  .section-title {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 32px 0 12px;
+  }
+
+  /* ── Control panel ── */
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+    padding-bottom: 18px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-links { display: flex; gap: 20px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding-bottom: 4px; border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--signal); border-bottom-color: var(--signal); }
+  .nav-actions { display: flex; align-items: center; gap: 12px; }
+
+  /* shared button + hint styles (used by nav toggle and the settings page) */
+  button {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 12px; padding: 8px 14px;
+    border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  button:hover { border-color: var(--signal); }
+  button.primary { border-color: var(--signal); color: var(--signal); }
+  button.running { border-color: var(--alert); color: var(--alert); }
+  .hint { color: var(--muted); font-size: 12px; }
+  /* ── Incidents feed ── */
+  .feed-head.incidents-head,
+  .event-row {
+    grid-template-columns: 4px 0.9fr 2.2fr 0.8fr;
+  }
+  .event-row {
+    display: grid;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    border-left: 3px solid transparent;
+    transition: background 0.4s ease;
+  }
+  .event-row:last-child { border-bottom: none; }
+  .event-row:hover { background: var(--panel-2); }
+
+  /* severity-driven left border + tag color */
+  .event-row.critical { border-left-color: var(--alert); }
+  .event-row.warning  { border-left-color: var(--warn); }
+  .event-row.info     { border-left-color: var(--signal); }
+
+  .sev-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+  .sev-tag.critical { background: rgba(255,93,93,0.15); color: var(--alert); }
+  .sev-tag.warning  { background: rgba(245,166,35,0.13); color: var(--warn); }
+  .sev-tag.info     { background: rgba(61,214,160,0.13); color: var(--signal); }
+
+  .event-type { font-weight: 500; color: var(--text); }
+  .event-detail { color: var(--muted); font-size: 13px; }
+  .event-when { color: var(--muted); }
+
+  .event-row.flash { animation: flash 1.5s ease; }
+
+  @media (max-width: 720px) {
+    .stats { grid-template-columns: 1fr; }
+    .feed-head { display: none; }
+    .row {
+      grid-template-columns: 14px 1fr;
+      grid-auto-flow: row;
+      gap: 4px 16px;
+    }
+    .row .ip, .row .seen, .row .count { grid-column: 2; }
+    .event-row { grid-template-columns: 4px 1fr; gap: 4px 12px; }
+    .event-row .event-detail, .event-row .event-when { grid-column: 2; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+    <div class="nav-links">
+      <a href="/" class="active">Monitor</a>
+      <a href="/config">Settings</a>
+    </div>
+    <div class="nav-actions">
+      <span class="hint" id="sniffer-hint">Checking…</span>
+      <button id="toggle-sniffer" class="primary">Start monitoring</button>
+    </div>
+  </nav>
+
+  <header>
+    <div>
+      <div class="title">Net<span class="accent">Detector</span></div>
+      <div class="subtitle">Unrecognised devices and network incidents.</div>
+    </div>
+    <div class="status" id="status">
+      <span class="pulse"></span>
+      <span id="status-text">Connecting…</span>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="num" id="stat-total">0</div>
+      <div class="label">Devices seen</div>
+    </div>
+    <div class="stat alarm">
+      <div class="num" id="stat-new">0</div>
+      <div class="label">New in last hour</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="stat-hits">0</div>
+      <div class="label">Total detections</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Devices</h2>
+  <div class="feed">
+    <div class="feed-head">
+      <span></span>
+      <span>MAC address</span>
+      <span>Vendor</span>
+      <span>IP</span>
+      <span>Times seen</span>
+      <span>Last seen</span>
+    </div>
+    <div id="rows"></div>
+    <div class="empty" id="empty">
+      <div class="big">All quiet</div>
+      <div>No unrecognised devices connected. New detections will appear here.</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Incidents</h2>
+  <div class="feed">
+    <div class="feed-head incidents-head">
+      <span></span>
+      <span>Type</span>
+      <span>Detail</span>
+      <span>When</span>
+    </div>
+    <div id="event-rows"></div>
+    <div class="empty" id="event-empty">
+      <div class="big">No Detections.</div>
+      <div>No suspicious alerts or activity detected. Anything flagged will show here.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const rowsEl   = document.getElementById("rows");
+  const emptyEl  = document.getElementById("empty");
+  const eventRowsEl = document.getElementById("event-rows");
+  const eventEmptyEl = document.getElementById("event-empty");
+  const statusEl = document.getElementById("status");
+  const statusTextEl = document.getElementById("status-text");
+
+  const lastSeenByMac = new Map();
+
+  function parseTime(ts) {
+    if (!ts) return null;
+    const t = new Date(String(ts).replace(" ", "T")).getTime();
+    return Number.isNaN(t) ? null : t;
+  }
+
+  function isNew(firstSeen) {
+    const t = parseTime(firstSeen);
+    if (t === null) return false;
+    return (Date.now() - t) < 3600 * 1000;
+  }
+
+  function timeAgo(ts) {
+    const t = parseTime(ts);
+    if (t === null) return "—";
+    const secs = Math.floor((Date.now() - t) / 1000);
+    if (secs < 60)   return secs + "s ago";
+    if (secs < 3600) return Math.floor(secs / 60) + "m ago";
+    if (secs < 86400) return Math.floor(secs / 3600) + "h ago";
+    return Math.floor(secs / 86400) + "d ago";
+  }
+
+  function renderAlerts(alerts) {
+    document.getElementById("stat-total").textContent = alerts.length;
+    document.getElementById("stat-new").textContent =
+      alerts.filter(a => isNew(a.first_seen)).length;
+    document.getElementById("stat-hits").textContent =
+      alerts.reduce((sum, a) => sum + (a.alert_count || 0), 0);
+
+    emptyEl.style.display = alerts.length ? "none" : "block";
+
+    rowsEl.innerHTML = "";
+    for (const a of alerts) {
+      const fresh = isNew(a.first_seen);
+      const changed = lastSeenByMac.get(a.mac) !== a.last_seen;
+      lastSeenByMac.set(a.mac, a.last_seen);
+
+      const vendor = a.vendor && a.vendor !== "Unknown Vendor"
+        ? `<span class="vendor">${escapeHtml(a.vendor)}</span>`
+        : `<span class="vendor unknown">unknown vendor</span>`;
+
+      const tag = fresh
+        ? `<span class="tag new">new</span>`
+        : `<span class="tag recurring">seen before</span>`;
+
+      const host = a.hostname
+        ? ` <span class="vendor unknown">· ${escapeHtml(a.hostname)}</span>`
+        : "";
+
+      const row = document.createElement("div");
+      row.className = "row" + (changed ? " flash" : "");
+      row.innerHTML = `
+        <span class="dot ${fresh ? "new" : "recurring"}"></span>
+        <span class="mac">${escapeHtml(a.mac)}${host} ${tag}</span>
+        ${vendor}
+        <span class="ip">${escapeHtml(a.ip)}</span>
+        <span class="count">${a.alert_count}×</span>
+        <span class="seen">${timeAgo(a.last_seen)}</span>
+      `;
+      rowsEl.appendChild(row);
+    }
+  }
+
+  let lastEventId = null;
+
+  function renderEvents(events) {
+    eventEmptyEl.style.display = events.length ? "none" : "block";
+
+    const newestId = events.length ? events[0].id : null;
+
+    eventRowsEl.innerHTML = "";
+    for (const ev of events) {
+      const sev = (ev.severity || "info").toLowerCase();
+      const isFresh = lastEventId !== null && ev.id > lastEventId;
+
+      const row = document.createElement("div");
+      row.className = `event-row ${sev}` + (isFresh ? " flash" : "");
+      row.innerHTML = `
+        <span></span>
+        <span class="event-type">
+          <span class="sev-tag ${sev}">${escapeHtml(ev.severity || "info")}</span>
+          ${escapeHtml(ev.type)}
+        </span>
+        <span class="event-detail">${escapeHtml(ev.details || "")}</span>
+        <span class="event-when">${timeAgo(ev.timestamp)}</span>
+      `;
+      eventRowsEl.appendChild(row);
+    }
+
+    lastEventId = newestId;
+  }
+
+  function update(state) {
+    renderAlerts(state.alerts || []);
+    renderEvents(state.events || []);
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => (
+      {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]
+    ));
+  }
+
+  function setStatus(up, text) {
+    statusEl.className = "status" + (up ? "" : " down");
+    statusTextEl.textContent = text;
+  }
+
+  let socket;
+  let reconnectDelay = 1000;
+
+  function connect() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    socket = new WebSocket(`${proto}://${location.host}/ws`);
+
+    socket.onopen = () => {
+      setStatus(true, "Live · listening");
+      reconnectDelay = 1000;
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("WS received",
+          (data.alerts || []).length, "devices,",
+          (data.events || []).length, "incidents");
+        update(data);
+      } catch (e) {
+        console.error("Failed to render state:", e);
+        setStatus(false, "Live · render error (see console)");
+      }
+    };
+
+    socket.onclose = () => {
+      setStatus(false, "Disconnected · retrying");
+      setTimeout(connect, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 1.5, 10000); // back off, cap at 10s
+    };
+
+    socket.onerror = () => socket.close();
+  }
+
+  connect();
+
+  setInterval(() => {
+    fetch("/api/state")
+      .then(r => r.json())
+      .then(update)
+      .catch(e => console.error("Fallback fetch failed:", e));
+  }, 15000);
+
+  const toggleBtn   = document.getElementById("toggle-sniffer");
+  const snifferHint = document.getElementById("sniffer-hint");
+
+
+  async function refreshSnifferState() {
+    try {
+      const { running } = await fetch("/api/sniffer/status").then(r => r.json());
+      toggleBtn.textContent = running ? "Stop monitoring" : "Start monitoring";
+      toggleBtn.classList.toggle("running", running);
+      snifferHint.textContent = running ? "Capturing traffic" : "Stopped";
+    } catch (e) {
+      snifferHint.textContent = "Control API unavailable";
+    }
+  }
+
+  toggleBtn.onclick = async () => {
+    try {
+      const { running } = await fetch("/api/sniffer/status").then(r => r.json());
+      const action = running ? "stop" : "start";
+      await fetch(`/api/sniffer/${action}`, { method: "POST" });
+      refreshSnifferState();
+    } catch (e) {
+      snifferHint.textContent = "Action failed";
+    }
+  };
+
+  refreshSnifferState();
+  setInterval(refreshSnifferState, 5000);  // keep the button in sync
+</script>
+</body>
+</html>

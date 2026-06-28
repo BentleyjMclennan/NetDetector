@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Watch — Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0e1419;
+    --panel:     #161e26;
+    --panel-2:   #1b242e;
+    --border:    #243240;
+    --text:      #d8e0e8;
+    --muted:     #6b7d8f;
+    --signal:    #3dd6a0;
+    --warn:      #f5a623;
+    --alert:     #ff5d5d;
+    --display: "Space Grotesk", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--mono); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 24px 64px; }
+ 
+  /* ── Top nav (matches the dashboard) ── */
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+    padding-bottom: 18px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-links { display: flex; gap: 20px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding-bottom: 4px; border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--signal); border-bottom-color: var(--signal); }
+ 
+  .title {
+    font-family: var(--display); font-weight: 700;
+    font-size: 26px; letter-spacing: -0.02em; margin: 28px 0 4px;
+  }
+  .title .accent { color: var(--signal); }
+  .subtitle {
+    color: var(--muted); font-size: 12px;
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 28px;
+  }
+ 
+  /* ── Settings card ── */
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 8px 24px;
+  }
+  .setting {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 24px; padding: 22px 0; border-bottom: 1px solid var(--border);
+  }
+  .setting:last-child { border-bottom: none; }
+  .setting .meta { flex: 1; }
+  .setting .name {
+    font-family: var(--display); font-weight: 500; font-size: 15px; color: var(--text);
+  }
+  .setting .desc { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+  .setting .control { flex-shrink: 0; display: flex; align-items: center; }
+ 
+  input[type="text"], input[type="email"] {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 13px; padding: 9px 11px;
+    border-radius: 4px; width: 240px;
+  }
+  input:focus { outline: none; border-color: var(--signal); }
+ 
+  /* toggle switch */
+  .switch { position: relative; width: 46px; height: 26px; cursor: pointer; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; border-radius: 26px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .slider::before {
+    content: ""; position: absolute; height: 18px; width: 18px;
+    left: 3px; top: 3px; border-radius: 50%;
+    background: var(--muted); transition: transform 0.2s, background 0.2s;
+  }
+  .switch input:checked + .slider {
+    background: rgba(61,214,160,0.18); border-color: var(--signal);
+  }
+  .switch input:checked + .slider::before {
+    transform: translateX(20px); background: var(--signal);
+  }
+ 
+  .actions {
+    display: flex; align-items: center; gap: 14px; margin-top: 24px;
+  }
+  button {
+    background: var(--panel-2); border: 1px solid var(--signal); color: var(--signal);
+    font-family: var(--mono); font-size: 12px; padding: 10px 20px;
+    border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  button:hover { background: rgba(61,214,160,0.1); }
+  .hint { color: var(--muted); font-size: 12px; }
+  .hint.error { color: var(--alert); }
+  .hint.ok { color: var(--signal); }
+ 
+  @media (max-width: 560px) {
+    .setting { flex-direction: column; gap: 12px; }
+    input[type="text"], input[type="email"] { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+ 
+  <nav class="nav">
+    <div class="nav-links">
+      <a href="/">Monitor</a>
+      <a href="/config" class="active">Settings</a>
+    </div>
+  </nav>
+ 
+  <div class="title">Net<span class="accent">Detector</span></div>
+  <div class="subtitle">Settings</div>
+ 
+  <div class="card">
+    <div class="setting">
+      <div class="meta">
+        <div class="name">Receiving email</div>
+        <div class="desc">Where device and spoofing alerts are sent.</div>
+      </div>
+      <div class="control">
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="off">
+      </div>
+    </div>
+ 
+    <div class="setting">
+      <div class="meta">
+        <div class="name">Email alerts</div>
+        <div class="desc">Turn off to rely on the dashboard only — incidents are still
+          recorded and shown, just not emailed.</div>
+      </div>
+      <div class="control">
+        <label class="switch">
+          <input type="checkbox" id="email-enabled">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+ 
+    <div class="setting">
+      <div class="meta">
+        <div class="name">Default gateway</div>
+        <div class="desc">Your router's IP. Leave blank to auto-detect. Setting it makes
+          gateway spoofing detection more reliable. Find it with <code>arp -a</code> or
+          <code>ipconfig</code>.</div>
+      </div>
+      <div class="control">
+        <input type="text" id="gateway" placeholder="auto-detect" autocomplete="off">
+      </div>
+    </div>
+  </div>
+ 
+  <div class="actions">
+    <button id="save">Save settings</button>
+    <span class="hint" id="hint">Changes apply next time monitoring starts.</span>
+  </div>
+ 
+</div>
+ 
+<script>
+  const emailInput   = document.getElementById("email");
+  const enabledInput = document.getElementById("email-enabled");
+  const gatewayInput = document.getElementById("gateway");
+  const hint         = document.getElementById("hint");
+ 
+  // Load current settings
+  fetch("/api/config")
+    .then(r => r.json())
+    .then(c => {
+      emailInput.value   = c.alert_email || "";
+      gatewayInput.value = c.gateway_ip || "";
+      enabledInput.checked = c.email_alerts_enabled !== false;
+    })
+    .catch(() => {
+      hint.textContent = "Couldn't load current settings.";
+      hint.className = "hint error";
+    });
+ 
+  document.getElementById("save").onclick = async () => {
+    hint.className = "hint";
+    hint.textContent = "Saving…";
+    try {
+      const res = await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          alert_email: emailInput.value,
+          gateway_ip: gatewayInput.value,
+          email_alerts_enabled: enabledInput.checked,
+        })
+      }).then(r => r.json());
+ 
+      if (res.error) {
+        hint.textContent = res.error;
+        hint.className = "hint error";
+      } else {
+        // reflect any normalisation the server did
+        emailInput.value   = res.alert_email || "";
+        gatewayInput.value = res.gateway_ip || "";
+        enabledInput.checked = res.email_alerts_enabled !== false;
+        hint.textContent = "Saved — restart monitoring to apply.";
+        hint.className = "hint ok";
+      }
+    } catch (e) {
+      hint.textContent = "Save failed.";
+      hint.className = "hint error";
+    }
+  };
+</script>
+</body>
+</html>
