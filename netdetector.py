@@ -162,7 +162,7 @@ def is_off_hours(now=None) -> bool:
     return hour >= start or hour < end   
 
 def detect_arp_spoof(packet):
-    """Flag when an IP is suddenly claimed by a different MAC — the poisoning signature."""
+    """Flag when an IP is suddenly claimed by a different MAC - possible ARP poisoning."""
     src_ip  = packet[ARP].psrc
     src_mac = packet[ARP].hwsrc.lower()
 
@@ -273,7 +273,7 @@ def send_spoof_email(ip, old_mac, new_mac, is_gateway):
         f"IP address:   {ip}\n"
         f"Was owned by: {old_mac}\n"
         f"Now claims:   {new_mac}\n\n"
-        + ("This is your DEFAULT GATEWAY — treat as serious. All your traffic "
+        + ("This is your DEFAULT GATEWAY - treat as serious. All your traffic "
            "could be routed through an attacker.\n" if is_gateway else "")
     )
     _send(msg, "spoof alert")
@@ -335,7 +335,7 @@ def handle_packet(packet):
 # main program loop
 if __name__ == "__main__":
     init_db()
-    log(f"NetDetector starting — {len(WHITELIST)} whitelisted devices")
+    log(f"NetDetector starting: {len(WHITELIST)} whitelisted devices")
     log(f"Gateway: {GATEWAY_IP or 'unknown'} | Alerts to: {ALERT_EMAIL or '(none set)'}")
     log("-" * 60)
 # init sniffer
