@@ -222,3 +222,5 @@ config.json
 whitelist.json
 traffic.log
 network_log.db
+network_log.db-shm
+network_log.db-wal
